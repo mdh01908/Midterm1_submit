@@ -1,0 +1,977 @@
+---
+title: "Midterm_HernandezMichelle"
+author: "Michelle Hernandez"
+format:
+  html:
+    embed-resources: true
+editor: visual
+---
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(tidytext)
+library(readr)
+library(dplyr)
+library(readxl)
+library(leaflet)
+library(DescTools)
+library(superheat)
+```
+
+## Introduction
+
+The data set selected was found on the Harvard Dataverse, in the [Medicine, Health and Life Sciences](https://dataverse.harvard.edu/dataverse/harvard?q=&fq0=subject_ss%3A%22Medicine,%20Health%20and%20Life%20Sciences%22&types=dataverses%3Adatasets&sort=dateSort&order=desc) section. The data set is called '**The impact of socioeconomic status on individual attitudes and experience with clinical trials: How socioeconomically disadvantaged individuals are being left behind'.** It was published October 10, 2023 by Jennifer Kim (Tufts University). It is a survey about people's attitudes toward clinical trials and experience being asked to participate in clinical research. There are 4,006 subjects that responded to this study.
+
+The research question being is asked is: Are socioeconomically disadvantaged individuals less likely to participate in clinical research? Socioeconomically disadvantaged people defined as having lower levels of education and lower rates of income.
+
+## Methods
+
+The data set was sourced from the Harvard Dataverse as a .csv file, which was subsequently converted into an Excel workbook for initial cleaning and preparation. In Excel, I simplified complex variable names, such as manually changing the 'Other - Write In (Required):Why aren't you interested in joining a clinical research study? \[Select all that apply\]' column to 'Q2_other_text.' Furthermore, all character responses of 'Yes' were uniformly coded as 1, while 'No' responses were coded as 0 to enhance data consistency. Columns were reorganized to optimize data relevance for this research project, moving less relevant variables to the end. The refined Excel file was then imported into the R programming environment using the 'read_excel' function for more thorough cleaning and data manipulation.
+
+All relevant variables were converted from character strings to numeric categories. Variables that were previously distributed across multiple columns, like 'Race,' were consolidated into a single column, 'total_race,' containing distinct race categories. The data was re-labeled with more accurate and comprehensible descriptors for the purpose of visualization and analysis. A focused subset of the original data set was created, including key variables of interest: Gender, State, Age, Interest in Participating in a Clinical Trial (labeled as 'interest'), Years of Work Experience (WorkExp), Household Size (Household), Number of Dependents (Dependents), Employment Status (EmpStat), Race (total_race), Annual Income (AnnualIncome), Education Level (Ed), Living Situation (LivingSit), English Proficiency Level (EnglishProf), Help with Understanding Medical Literature (HelpMedLit), Location Type (Location: city, suburb, rural), Insurance Status (Insurance), Perceived Benefits of Participating in a Trial (Benefit), and Perceived Risks of Participation (Risk).
+
+There was no missing data, and the final analyzed data set included all 4,006 subjects from 51 US states.
+
+Bar plots were initially generated for each key variable of interest to visualize their distributions and identify any outliers, missing values, or meaningful patterns. Subsequently, stacked bar plots were constructed to illustrate the counts of groups within each key variable, color-coded by interest in clinical trials.
+
+To facilitate a more intuitive understanding of the data, these same plots were recreated with counts displayed proportionally. Additionally, heatmaps were generated to examine the differences in perceived benefits and risks across key variables, based on patterns related to clinical trial interest. Stacked bar charts were created as supplementary visualizations for the respective heatmaps. Finally, maps were produced to explore any discernible patterns between the average interest level and average income by state, considering the primary variables of interest.
+
+```{r}
+dat <- read_excel("DataSurvey_cleanup.xlsx")
+```
+
+```{r}
+#unique(dat$interest)
+dat <- dat %>%
+    filter(!is.na(interest)) %>%
+   mutate(interest = recode(interest,
+                            "0t at All Interested" = 0,
+                            "0t Very Interested" = 1,
+                            "Somewhat Interested"    = 2,
+                            "Interested"    = 3,
+                            "Very Interested"  = 4,
+                            .default = 5  # 5 there shouldnt be 5s, NO 5s
+   ))
+
+#unique(dat$EmpStat)
+dat <- dat %>% 
+  filter(!is.na(EmpStat)) %>%
+  mutate(EmpStat = recode(EmpStat,
+                          "Unemployed" = 0,
+                          "Part-time (<35 hours/week)" = 1,
+                          "Full-time (35+ hours/week)" = 2,
+                          "Student" = 3,
+                          "Retired" = 4,
+                          "Homemaker" = 5,
+                          "Disabled" = 6, 
+                          .default = 7  # there should be no 7
+  ))
+
+#unique(dat$AnnualIncome)
+dat <- dat %>% 
+  filter(!is.na(AnnualIncome)) %>%
+  mutate(AnnualIncome = recode(AnnualIncome,
+                          "Less than $10,000" = 1,
+                          "$10,001 - $40,000"  = 2,
+                          "$40,001 - $80,000" = 3,
+                          "$80,001 - $100,000" = 4,
+                          "$100,001 - $120,000" = 5,
+                          "$120,000 or more" = 6,
+                          .default = 0  # 0 here is no income
+  ))
+
+#unique(dat$Ed)
+dat <- dat %>% 
+  filter(!is.na(Ed)) %>%
+  mutate(Ed = recode(Ed,
+                     "8th grade or less"   = 0,
+                     "Some high school, but did 0t graduate"  = 1,
+                     "High school graduate or GED"  = 2,
+                     "Associate degree"  = 3,
+                     "Bachelor's degree (B.A., B.S., etc.)"  = 4,
+                     "Master's degree (MA, MBA, etc.)"  = 5,
+                     "Doctorate (PhD, MD, etc.)"  = 6,
+                     .default = 7  #there should be no 7
+  ))
+
+#unique(dat$LivingSit)
+dat <- dat %>% 
+  filter(!is.na(LivingSit)) %>%
+  mutate(LivingSit = recode(LivingSit,
+          "I am homeless/live in a shelter"   = 0,
+          "I rent"   = 1,
+          "I or someone in my household owns the home without a mortgage"  = 2,
+          "I or someone in my household owns the home with a mortgage"   = 3,
+          .default = 4  # there should be no 4s
+  ))
+
+#unique(dat$EnglishProf)
+dat <- dat %>% 
+  filter(!is.na(EnglishProf)) %>%
+  mutate(EnglishProf = recode(EnglishProf,
+              "0t at All"   = 0,
+              "0t Well"   = 1,
+              "Well"   = 2,
+              "Very Well"  = 3,
+           .default = 4  # there should be no 4
+  ))
+
+#unique(dat$HelpMedLit)
+dat <- dat %>% 
+  filter(!is.na(HelpMedLit)) %>%
+  mutate(HelpMedLit = recode(HelpMedLit,
+                   "Never"    = 0,
+                 "Rarely"   = 1,
+                 "Sometimes"   = 2,
+                 "Often"    = 3,
+                  "Always" = 4,
+             .default = 5  # there should be no 5
+  ))
+
+
+#unique(dat$Location)
+dat <- dat %>% 
+  filter(!is.na(Location)) %>%
+  mutate(Location = recode(Location,
+       "Rural area (0t too many people, large amount of undeveloped/farmland)" = 0,
+       "Suburbs (Town, outside of a city)" = 1,
+       "City (A lot of people, city)"    = 2,
+       .default = 3  # there should be no 3
+  ))
+
+
+#unique(dat$Insurance)
+dat <- dat %>% 
+  filter(!is.na(Insurance)) %>%
+  mutate(Insurance = recode(Insurance,
+                     "0, I am 0T covered by a health insurance plan" = 0,
+                     "1, I have a health insurance plan"  = 1, 
+                           .default = 2  # 2 here is I DONT KNOW
+  ))
+
+
+#unique(dat$InsuranceType)
+dat <- dat %>%
+  filter(!is.na(InsuranceType)) %>%
+  mutate(InsuranceType = recode(InsuranceType,
+                   "I have public insurance"  = 0,
+                   "Private insurance that I buy on my own" = 1,
+                   "Private insurance through my employer" = 2,
+                   "I have a mix of private and public" = 3,
+                   "No Health Insurance or Unknown" = 4,
+                  .default = 5  # should be no 5 now
+  ))
+
+#unique(dat$AffordMed)
+dat <- dat %>% 
+  filter(!is.na(AffordMed)) %>%
+  mutate(AffordMed = recode(AffordMed,
+       "I am almost never able to afford the medical care I need" = 0,
+       "I am often 0t able to afford the medical care I need"  = 1, 
+       "I can usually afford the medical care I need"   = 2,
+       "I can afford the medical care I need"   = 3,
+       "I can always afford the medical care I need"  = 4, 
+       "NA - No Health Insurance" = 5,
+          .default = 6  # should be no 6 here now, 
+  ))
+
+
+#unique(dat$Gender)
+dat <- dat %>%
+  filter(!is.na(Gender)) %>%
+  mutate(Gender = recode(Gender,
+                     "Male"  = 0, 
+                     "Female"  = 1, 
+                     "Transgender Male/Transgender Man"= 2,
+                     "Transgender Female/Transgender Woman"= 3,
+                     "0n-Binary/Gender 0n-Confirming" = 4, 
+                     "Gender Queer/Gender Fluid"  = 5, 
+                     "A0ther Identity" = 6,
+                     .default = 7  #there should be no 7
+  ))
+
+#unique(dat$Benefit)
+dat <- dat %>%
+  filter(!is.na(Benefit)) %>%
+  mutate(Benefit = recode(Benefit,
+                          "0ne - I do 0t believe there are benefits"= 0, 
+                          "Possibility of receiving monetary compensation"= 1, 
+                          "Possibility of improving my health"= 2,
+                          "Possibility of contributing to science"= 3,
+                          "Possibility of improving treatment for others with my disease/condition" = 4, 
+                          "Possibility of receiving free medication/medical procedures/care"  = 5, 
+                          "Possibility of receiving better medical care and attention"  = 6,
+                          "Possibility of trying a new treatment for my disease/condition"=7,
+                         .default = 8  #is other here
+  ))
+
+#unique(dat$Risk)
+dat <- dat %>%
+  filter(!is.na(Risk)) %>%
+  mutate(Risk = recode(Risk,
+                       "0ne - I do 0t believe there are risks"= 0, 
+                       "There may be side effects/risk to my overall health"= 1, 
+                       "Might receive a placebo / sugar pill"    = 2,
+                       "My private medical information could be made public"      = 3,
+                       "Could only get the study medicine for a limited amount of time" = 4, 
+                       "Might have to stop my current treatments"  = 5, 
+                        "Costs" = 6,
+                        "Fear of Unknown"=7,
+                          .default = 8  #is other, there should be other
+  ))
+
+dat <- dat %>%
+  mutate(total_race = case_when(
+    RaceW == 'White' ~ 0,
+    RaceB == 'Black or African American' ~ 1,
+    RaceA == 'Asian' ~ 2,
+    RacePI == 'Native Hawaiian or Pacific Islander' ~ 3,
+    RaceL == 'Hispanic or Lati0' ~ 4,
+    RaceOther == 'Other - Write In (Required)' ~ 5,
+    Race0Ans == 'Prefer 0t to answer' ~ 6,
+    TRUE ~ NA_integer_
+  ))
+
+
+## continuous variables 
+
+dat <- dat %>% 
+  filter(!is.na(Household)) %>%
+  mutate(Household = recode(Household,
+                            "0" = 0,
+                            "1" = 1,
+                            "2"  = 2,
+                            "3" = 3,
+                            "4" = 4,
+                            "5" = 5, 
+                            "More than 5" = 6, # 6 mean more than 5
+                            .default = 7  # THERE SHOULD BE NO 7
+  ))
+
+dat <- dat %>% 
+  filter(!is.na(Dependents)) %>%
+  mutate(Dependents = recode(Dependents,
+                            "0" = 0,
+                            "1" = 1,
+                            "2"  = 2,
+                            "3" = 3,
+                            "4" = 4,
+                            "5" = 5,
+                            "More than 5" = 6, # 6 mean more than 5
+                            .default = 7  # THERE SHOULD BE NO 7
+  ))
+
+
+
+```
+
+```{r}
+dat$EmpStat_Label <- factor(dat$EmpStat, levels = 0:6, labels = c(
+  "Unemployed", "Part-time", "Full-time", "Student", "Retired", "Homemaker", "Disabled"
+))
+dat$AnnualIncome_Label <- factor(dat$AnnualIncome, levels = 0:6, labels = c(
+   "NA-No Income", "<$10,000", "$10,001-$40,000", "$40,001-$80,000", "$80,001-$100,000", "$100,001-$120,000", ">$120,000"
+))
+dat$Ed_Label <- factor(dat$Ed, levels = 0:6, labels = c(
+  "8th or less", "Some High School", "GED", "Associates", "Bachelors", "Masters", "Doctorate"
+))
+dat$LivingSit_Label <- factor(dat$LivingSit, levels = 0:3, labels = c(
+  "Homeless", "Rent", "Own home w/o mortgage", "Own home w/ mortgage"
+))
+dat$EnglishProf_Label <- factor(dat$EnglishProf, levels = 0:3, labels = c(
+  "Not at All", "Not Well", "Well", "Very Well"
+))
+dat$HelpMedLit_Label <- factor(dat$HelpMedLit, levels = 0:4, labels = c(
+  "Never", "Rarely", "Sometimes", "Often", "Always"
+))
+dat$Location_Label <- factor(dat$Location, levels = 0:2, labels = c(
+  "Rural", "Suburbs", "City"
+))
+dat$Insurance_Label <- factor(dat$Insurance, levels = 0:1, labels = c(
+  "No Health Insurance", "Have Health Insurance"
+))
+dat$InsuranceType_Label <- factor(dat$InsuranceType, levels = 0:4, labels = c(
+  "Public insurance", "Private Insurance that I buy on my own", "Private Insurance Through Employer", "Mix of Private and Public", "No Health Insurance or Unknown"
+))
+dat$AffordMed_Label <- factor(dat$AffordMed, levels = 0:5, labels = c(
+  "Never Able to Afford", "Often Not Able to Afford",  "Can Usually Afford", "Can Afford", "Can Always Afford", "NA - No Health Insurance"
+))
+dat$Gender_Label <- factor(dat$Gender, levels = 0:6, labels = c(
+  "Male", "Female", "Transgender Male", "Transgender Female", "Non-Binary", "Gender Fluid", "Other"
+))
+dat$total_race_Label <- factor(dat$total_race, levels = 0:6, labels = c(
+  "White", "Black", "Asian", "Native Hawaiian or Pacific Islander", "Hispanic", "Other", "No Answer"
+))
+dat$Benefit_Label <- factor(dat$Benefit, levels = 0:8, labels = c(
+  "No Benefits", "Monetary Compensation", "Improving my Health", "Contributing to Science",
+  "Improving Treatment for Others with my Disease/Condition", "Receiving Free Medication/Medical Procedures/Care",
+  "Receiving Better Medical Care and Attention", "Trying a New Treatment for my Disease/Condition",
+  "Other Reason"
+))
+dat$Risk_Label <- factor(dat$Risk, levels = 0:8, labels = c(
+  "No Risks", "Side effects/risk to my overall health", "Might receive placebo", 
+  "Private medical information could be made public",
+  "Only get the study medicine for a limited amount of time", 
+  "Might have to stop my current treatments", "Costs", "Fear of unknown",
+  "Other reason"
+))
+
+dat$interest_Label <- factor(dat$interest, levels = 0:4, labels = c(
+  "Not At All Interested", 
+  "Not Very Interested", 
+  "Somewhat Interested",
+  "Interested", 
+  "Very Interested"
+))
+trial_interest = factor(dat$interest, levels = c(0, 1, 2, 3, 4), labels = c("Not At All Interested", 
+                                                                            "Not Very Interested", 
+                                                                            "Somewhat Interested",
+                                                                            "Interested", 
+                                                                            "Very Interested"))
+
+```
+
+Subset relevant variables
+
+```{r}
+sub_dat = subset(dat, select = c(Gender_Label, State, Age, interest_Label, WorkExp, Household, Dependents, EmpStat_Label, 
+                                 total_race_Label, AnnualIncome_Label, Ed_Label,
+                                 LivingSit_Label, EnglishProf_Label, HelpMedLit_Label, Location_Label,
+                                 Insurance_Label, AffordMed_Label, Benefit_Label, Risk_Label))
+#head(sub_dat)
+```
+
+## Preliminary Results
+
+The preliminary results key findings:
+
+**Age and Gender**: The study's participants were diverse in terms of age and gender, with a wide age range and an almost equal distribution of males and females.
+
+**Geographic Variation**: Participants from this study come from 51 states in the US, relatively proportionally to each state's respective population.
+
+**Race**: The majority of participants in the study were White, which may affect the generalizability of the findings to more diverse populations.
+
+**Income Levels**: Most participants fell within the income range of \$10,000 to \$80,000, with income impacting interest in clinical trials.
+
+**Education**: Participants with higher education levels were more likely to express interest in clinical trials.
+
+**Health Insurance**: The majority of participants had health insurance, and interest in clinical trials was relatively consistent among those with and without insurance.
+
+**Years of Work Experience**: The distribution of work experience varied, with most participants having 10-40 years of experience.
+
+The main variable of interest, participant interest in clinical trials, showed that most participants were somewhat to very interested.
+
+```{r}
+#There are not many continuous variables in the data set. Continuous variables are summarized here:
+
+### Summary Tables for key variables
+# summary_tables <- list()
+# for (i in names(sub_dat)) {
+#   summary_table <- summary(sub_dat[[i]])
+#   summary_tables[[i]] <- summary_table
+# }
+# 
+# for (i in names(sub_dat)) {
+#   cat("Summary for column:", i, "\n")
+#   print(summary_tables[[i]])
+# }
+
+# summary(dat$Age)
+# summary(dat$WorkExp)
+# summary(dat$Household)
+# summary(dat$Dependents)
+# 
+# quantile(dat$Age)
+# quantile(dat$WorkExp)
+
+
+hist(dat$Age, main = "Histogram of Age", xlab = "Age", ylab = "Counts", col="lightblue")
+hist(dat$WorkExp, main = "Histogram of Work Experience", xlab = "Years of Work Experience", ylab = "Counts", col="lightyellow")
+
+```
+
+```{r}
+
+custom_titles <- c("Distribution of Gender", "Distribution of States", "Distribution of Interest Level", "Distribution of Employment Status", "Distribution of Race", "Distribution of English Procifiency", "Distribution of Help with Medical Literature", "Distribution of Location", "Distribution of Insurance", "Distribution of Ability to Afford Medical Care", "Distribution of Perceived Benefits", " Distribution of Perceived Risks")
+
+plot_colors <- rainbow(length(names(sub_dat)))
+
+for (i in 1:length(names(sub_dat))) {
+  col <- names(sub_dat)[i]
+  if (!is.numeric(sub_dat[[col]])) {
+    counts <- table(sub_dat[[col]])
+    title <- custom_titles[which(names(sub_dat) == col)]
+    barplot(counts, main = title, beside = TRUE, las = 2, cex.names = 0.7, ylab = "Counts", col = plot_colors[i])
+  }
+}
+
+ggplot(data = dat, aes(x = Household)) +
+  geom_bar(fill="purple")
+
+ggplot(data = dat, aes(x = Dependents)) +
+  geom_bar(fill="green")
+
+
+```
+
+The age group for this study ranges from 18-93 years old, with a mean age of 50. From the histogram and the quantile results we can see most people are between the ages 35-65 and it is mostly evenly distributed within that range.
+
+There is an even amount of males and females (1990 males, 1995 females) with a small number of people identifying as another gender option (5 transgender male, 3 transgender female, 7 non-binary, 4 gender fluid and 2 other). We can see that we have a wide range of participants from each state. Unsurprisingly there are more participants from the larger states with a larger population (California, Florida, New York, Texas). This makes sense as these are the states in the US with the largest populations. See (https://www.statsamerica.org/sip/rank_list.aspx?rank_label=pop1).
+
+The majority of the participants in this study are White (3,089 out of 4,006). This is not representative of the entire country and will affect the analysis. Caution should be taken in interpreting this data in relation to other populations with a different distribution of race.
+
+Most people in this study are in the 10,000-40,000 or 40,001-80,000 Annual Income range (1,205 and 1,257 participants respectively).
+
+The average number of people in the household is \~2.5 and average number of dependents is \~1. The poverty threshold for the USA from 2022 is 14,880 for individuals, 18,990 for a household of 2, 23280 for a household of 3, 29950 for a household of 4, 35510 household of 5, 40160 for household of 6. Because we only have income ranges we are not able to assess exact poverty levels relative to size of household.
+
+A majority of participants have a GED or Bachelors degree (1750 and 958 participants respectively).
+
+Most people in this study have health insurance (3561)
+
+Years of work experience ranges greatly from 0 to 74 years. From the histogram of work experience we can see that there are a large number of people with no work experience. The quantiles show that most people in the study population have worked for 10-40 years. Most people in this study either work full-time (1632 participants) or are retired (1116 participants).
+
+The main variable of interest in this analysis is participant's interest in participating in a clinical trial. Most people in the study replied they were 'somewhat interested' in participating in a clinical trial (1280 out of 4006). 329 replied 'not at all interest', 798 'not very interested', 728 'interested', and 871 'very interested'. So most people in the study are somewhat to very interested.
+
+### Bar Plots
+
+```{r}
+
+ggplot(data = dat, aes(x = Gender_Label, fill = trial_interest, group = trial_interest)) +
+  geom_bar() +
+  labs(title = "Interest in Clinical Trials by Gender", y = "Count") +
+  xlab("Gender") +  # Label the x-axis
+  labs(fill = "Clinical Trial Interest Level") + 
+  theme_minimal() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("maroon1","pink1","olivedrab1", "olivedrab3", "olivedrab"))
+
+ggplot(data = dat, aes(x = Ed_Label, fill = trial_interest, group = trial_interest)) +
+  geom_bar() +
+  labs(title = "Interest in Clinical Trials by Education Level", y = "Count") +
+  xlab("Education Level") +  # Label the x-axis
+  labs(fill = "Clinical Trial Interest Level") +  
+  theme_minimal() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("maroon1","pink1","olivedrab1", "olivedrab3", "olivedrab"))
+
+
+ggplot(data = dat, aes(x = Location_Label, fill = trial_interest, group = trial_interest, na.rm=TRUE)) +
+  geom_bar() +
+  labs(title = "Clinical Trial Interest by Living Location", y = "Count") +
+  xlab("Living Location") +  
+  labs(fill = "Clinical Trial Interest Level") +  
+  theme_minimal() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("maroon1","pink1","olivedrab1", "olivedrab3", "olivedrab"))
+
+ggplot(data = dat, aes(x = AnnualIncome_Label, fill = trial_interest, group = trial_interest, na.rm=TRUE)) +
+  geom_bar() +
+  labs(title = "Clinical Trial Interest by Annual Income", y = "Count") +
+  xlab("Annual Income") +  
+  labs(fill = "Clinical Trial Interest Level") +  
+  theme_minimal() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("maroon1","pink1","olivedrab1", "olivedrab3", "olivedrab"))
+
+ggplot(data = dat, aes(x = total_race_Label, fill = trial_interest, group = trial_interest, na.rm=TRUE)) +
+  geom_bar() +
+  labs(title = "Clinical Trial Interest by Race", y = "Count") +
+  xlab("Race") +  
+  labs(fill = "Clinical Trial Interest Level") +  
+  theme_minimal() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("maroon1","pink1","olivedrab1", "olivedrab3", "olivedrab"))
+
+ggplot(data = dat, aes(x = EmpStat_Label, fill = trial_interest, group = trial_interest, na.rm=TRUE)) +
+  geom_bar() +
+  labs(title = "Clinical Trial Interest by Employment Status", y = "Count") +
+  xlab("Employment Status") +  
+  labs(fill = "Clinical Trial Interest Level") +  
+  theme_minimal() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("maroon1","pink1","olivedrab1", "olivedrab3", "olivedrab"))
+
+ggplot(data = dat, aes(x = LivingSit_Label, fill = trial_interest, group = trial_interest, na.rm=TRUE)) +
+  geom_bar() +
+  labs(title = "Clinical Trial Interest by Living Situation", y = "Count") +
+  xlab("Living Situation") +  
+  labs(fill = "Clinical Trial Interest Level") +  
+  theme_minimal() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("maroon1","pink1","olivedrab1", "olivedrab3", "olivedrab"))
+
+ggplot(data = dat, aes(x = EnglishProf_Label, fill = trial_interest, group = trial_interest, na.rm=TRUE)) +
+  geom_bar() +
+  labs(title = "Clinical Trial Interest by English Procifiency", y = "Count") +
+  xlab("English Procifiency Level") +  
+  labs(fill = "Clinical Trial Interest Level") +  
+  theme_minimal() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("maroon1","pink1","olivedrab1", "olivedrab3", "olivedrab"))
+
+ggplot(data = dat, aes(x = HelpMedLit_Label, fill = trial_interest, group = trial_interest, na.rm=TRUE)) +
+  geom_bar() +
+  labs(title = "Clinical Trial Interest by Help Understanding Medical Literature", y = "Count") +
+  xlab("Medical Lit Comprehension Level") +  
+  labs(fill = "Clinical Trial Interest Level") +  
+  theme_minimal() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("maroon1","pink1","olivedrab1", "olivedrab3", "olivedrab"))
+
+ggplot(data = dat, aes(x = Insurance_Label, fill = trial_interest, group = trial_interest, na.rm=TRUE)) +
+  geom_bar() +
+  labs(title = "Clinical Trial Interest by Insurance", y = "Count") +
+  xlab("Insurance Status") +  
+  labs(fill = "Clinical Trial Interest Level") +  
+  theme_minimal() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("maroon1","pink1","olivedrab1", "olivedrab3", "olivedrab"))
+
+ggplot(data = dat, aes(x = AffordMed_Label, fill = trial_interest, group = trial_interest, na.rm=TRUE)) +
+  geom_bar() +
+  labs(title = "Clinical Trial Interest by Medical Care Affordability", y = "Count") +
+  xlab("Affordability Level") +  
+  labs(fill = "Clinical Trial Interest Level") +  
+  theme_minimal() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("maroon1","pink1","olivedrab1", "olivedrab3", "olivedrab"))
+
+
+
+```
+
+### Proportional Bar Charts
+
+These bar charts represent the same data above but proportional to their groups.
+
+```{r}
+
+# Stacked bar chart for "Gender" and "Interest_Label"
+ggplot(data = dat, aes(x = Gender_Label, fill = interest_Label)) +
+  geom_bar(position = "fill") +
+  xlab(" Gender" ) +
+  ylab("Proportion") +
+  ggtitle("Proportional Interest in Clinical Trials by Gender")+
+  labs(fill = "Clinical Trial Interest Level") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("khaki2","lemonchiffon1","#DADAEB", "#9E9AC8", "#6A51A3"))
+
+# Stacked bar chart for "EmpStat_Label" and "Interest_Label"
+ggplot(data = dat, aes(x = EmpStat_Label, fill = interest_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Employment Status" ) +
+  ylab("Proportion") +
+  ggtitle("Proportional Interest in Clinical Trials by Employment Status")+
+  labs(fill = "Clinical Trial Interest Level") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("khaki2","lemonchiffon1","#DADAEB", "#9E9AC8", "#6A51A3"))
+
+# Stacked bar chart for "race" and "Interest_Label"
+ggplot(data = dat, aes(x = total_race_Label, fill = interest_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Race" ) +
+  ylab("Proportion") +
+  ggtitle("Proportional Interest in Clinical Trials by Race")+
+  labs(fill = "Clinical Trial Interest Level") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("khaki2","lemonchiffon1","#DADAEB", "#9E9AC8", "#6A51A3"))
+
+# Stacked bar chart for "Annual Income" and "Interest_Label"
+ggplot(data = dat, aes(x = AnnualIncome_Label, fill = interest_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Annual Income" ) +
+  ylab("Proportion") +
+  ggtitle("Proportional Interest in Clinical Trials by Income")+
+   labs(fill = "Clinical Trial Interest Level") +
+  theme_minimal() +
+   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("khaki2","lemonchiffon1","#DADAEB", "#9E9AC8", "#6A51A3"))
+
+# Stacked bar chart for "Education" and "Interest_Label"
+ggplot(data = dat, aes(x = Ed_Label, fill = interest_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Education Level" ) +
+  ylab("Proportion") +
+  ggtitle("Proportional Interest in Clinical Trials by Clinical Trial Interest Level")+
+   labs(fill = "Clinical Trial Interest Level") +
+  theme_minimal() +
+   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("khaki2","lemonchiffon1","#DADAEB", "#9E9AC8", "#6A51A3"))
+
+# Stacked bar chart for "Living" and "Interest_Label"
+ggplot(data = dat, aes(x = LivingSit_Label, fill = interest_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Living Situation" ) +
+  ylab("Proportion") +
+  ggtitle("Proportional Interest in Clinical Trials by Living Situation")+
+   labs(fill = "Clinical Trial Interest Level") +
+  theme_minimal() +
+   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("khaki2","lemonchiffon1","#DADAEB", "#9E9AC8", "#6A51A3"))
+
+# Stacked bar chart for "Location" and "Interest_Label"
+ggplot(data = dat, aes(x = Location_Label, fill = interest_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Living Location" ) +
+  ylab("Proportion") +
+  ggtitle("Proportional Interest in Clinical Trials by Location")+
+   labs(fill = "Clinical Trial Interest Level") +
+  theme_minimal() +
+   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("khaki2","lemonchiffon1","#DADAEB", "#9E9AC8", "#6A51A3"))
+
+
+# Stacked bar chart for "EnglishProf_Label" and "Interest_Label"
+ggplot(data = dat, aes(x = EnglishProf_Label, fill = interest_Label)) +
+  geom_bar(position = "fill") +
+  xlab("English Proficiency Label") +
+  ylab("Proportion") +
+   labs(fill = "Clinical Trial Interest Level") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   ggtitle("Proportional Interest in Clinical Trials by English Proficiency")+
+  scale_fill_manual(values = c("khaki2","lemonchiffon1","#DADAEB", "#9E9AC8", "#6A51A3"))
+
+# Stacked bar chart for "HelpMedLit_Label" and "Interest_Label"
+ggplot(data = dat, aes(x = HelpMedLit_Label, fill = interest_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Help with Medical Literacy Label") +
+  ylab("Proportion") +
+   theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  ggtitle("Proportional Interest in Clinical Trials by Help Understanding Medical Literature")+
+   labs(fill = "Clinical Trial Interest Level") +
+   scale_fill_manual(values = c("khaki2","lemonchiffon1","#DADAEB", "#9E9AC8", "#6A51A3"))
+
+# Stacked bar chart for "Insurance_Label" and "Interest_Label"
+ggplot(data = dat, aes(x = Insurance_Label, fill = interest_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Insurance Label") +
+  ylab("Proportion") +
+   theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  ggtitle("Proportional Interest in Clinical Trials by Insurance")+
+  labs(fill = "Clinical Trial Interest Level") +
+    scale_fill_manual(values = c("khaki2","lemonchiffon1","#DADAEB", "#9E9AC8", "#6A51A3"))
+
+# Stacked bar chart for "AffordMed_Label" and "Interest_Label"
+ggplot(data = dat, aes(x = AffordMed_Label, fill = interest_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Affordability of Medical Care" ) +
+  ylab("Proportion") +
+  ggtitle("Proportional Interest in Clinical Trials by Ability to Afford Medical Care")+
+   labs(fill = "Clinical Trial Interest Level") +
+    theme_minimal() +
+   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("khaki2","lemonchiffon1","#DADAEB", "#9E9AC8", "#6A51A3"))
+
+
+
+
+```
+
+Interest levels are consistent compared to males and females. However those participants that identified as Transgender Male/Female or Gender fluid were proportionally much more interested in participating in research. Interest levels are relatively consistent across employment status, with slightly more full-time employed people being somewhat to very interested in participating in a clinical trial. Interest levels are proportionally consistent across the different races and those who selected other. There is a slightly increase in participants interest levels as income increases, but this is very slight. However, those that reported no income had a proportionally significantly less interest in participating in clinical research. There is a steady increase in interest levels with increase in education levels with those participants with a doctorate having the highest levels of somewhat to very interested. Conversely, those who need additional help reading medical literature are more interested in participating in trials.
+
+English proficiency is a large factor in interest levels, proportionally those who have better English proficiency are more interested in research.
+
+Interestingly interest in clinical trials is consistent across living situations. Also consistent across location of living.
+
+The proportion of those interested in clinical trials is similar whether or not they have health insurance. Interest is also similar among people's ability to afford their medical care.
+
+Look at benefits and risks of No income people
+
+look at benefits risk for transgender and gender fluid
+
+Education
+
+### Heatmaps
+
+```{r}
+
+benefits_income = table(dat$Benefit_Label, dat$AnnualIncome_Label)
+superheat(benefits_income, scale=TRUE,heat.col.scheme = "viridis",title = "Perceived Benefits of Trials by Annual Income Group", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+risk_income = table(dat$Risk_Label, dat$AnnualIncome_Label)
+superheat(risk_income,scale=TRUE, heat.col.scheme = "red",title = "Perceived Risks of Trials by Annual Income Group", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+
+ggplot(data = dat, aes(x = AnnualIncome_Label, fill = Benefit_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Annual Income" ) +
+  ylab("Perceived Benefit") +
+  ggtitle("Stacked Bar Chart of Perceived Benefits by Annual Income")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+ggplot(data = dat, aes(x = AnnualIncome_Label, fill = Risk_Label)) +
+  geom_bar(position = "fill") +
+  xlab(" Annual Income" ) +
+  ylab("Perceived Risk") +
+  ggtitle("Stacked Bar Chart of Perceived Risks by Annual Income")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+From this heatmap we can see that the for those in the lowest income group, \<10,000, monetary compensation is the largest benefit for participating in a clinical study. The lower the income group, the higher rates of no perceived benefit. While side effects is the largest perceived risk across all income groups. Conversely, the lowest income groups also have the highest rates of no perceived risks.
+
+```{r}
+benefits_gender = table(dat$Benefit_Label, dat$Gender_Label)
+superheat(benefits_gender,scale=TRUE, heat.col.scheme = "viridis",title = "Perceived Benefits of Trials by Gender", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+risk_gender = table(dat$Risk_Label, dat$Gender_Label)
+superheat(risk_gender, scale=TRUE,heat.col.scheme = "red",title = "Perceived Risks of Trials by Gender", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+ggplot(data = dat, aes(x = Gender_Label, fill = Benefit_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Gender" ) +
+  ylab("Perceived Benefit") +
+  ggtitle("Stacked Bar Chart of Perceived Benefits by Gender")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = dat, aes(x = Gender_Label, fill = Risk_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Gender" ) +
+  ylab("Perceived Risk") +
+  ggtitle("Stacked Bar Chart of Perceived Risks by Gender")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Perceived benefits and risks are similar among Males and Females. However, those participants that identified as Transgender Female or Gender fluid had the highest benefit of improving treatment for others.
+
+```{r}
+benefits_ed = table(dat$Benefit_Label, dat$Ed_Label)
+superheat(benefits_ed,scale=TRUE, heat.col.scheme = "viridis",title = "Perceived Benefits of Trials by Education Level", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+risk_ed = table(dat$Risk_Label, dat$Ed_Label)
+superheat(risk_ed, scale=TRUE,heat.col.scheme = "red",title = "Perceived Risks of Trials by Education Level", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+ggplot(data = dat, aes(x = Ed_Label, fill = Benefit_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Education Level" ) +
+  ylab("Perceived Benefit") +
+  ggtitle("Stacked Bar Chart of Perceived Benefits by Education Level")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = dat, aes(x = Ed_Label, fill = Risk_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Education Level" ) +
+  ylab("Perceived Risk") +
+  ggtitle("Stacked Bar Chart of Perceived Risks by Education Level")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = dat, aes(x = Ed_Label, fill = Risk_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Education Level" ) +
+  ylab("Perceived Risk") +
+  ggtitle("Stacked Bar Chart of Perceived Risks by Education Level")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+From this graph we can see there is a clear trend with those with lowest levels of education selecting that there are no benefits to clinical trial or that the biggest benefit is monetary compensation. The 8th grade or less group also had the highest rate of only getting the study medicine for a limited amount time, suggesting possible concerns with ability to afford medical care.
+
+```{r}
+benefits_eng = table(dat$Benefit_Label, dat$EnglishProf_Label)
+superheat(benefits_eng,scale=TRUE, heat.col.scheme = "viridis",title = "Perceived Benefits of Trials by English Proficiency", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+risk_eng = table(dat$Risk_Label, dat$EnglishProf_Label)
+superheat(risk_eng, scale=TRUE,heat.col.scheme = "red",title = "Perceived Risks of Trials by English Proficiency", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+ggplot(data = dat, aes(x = EnglishProf_Label, fill = Benefit_Label)) +
+  geom_bar(position = "fill") +
+  xlab("English Proficiency" ) +
+  ylab("Perceived Benefit") +
+  ggtitle("Stacked Bar Chart of Perceived Benefit by English Proficiency")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+ggplot(data = dat, aes(x = EnglishProf_Label, fill = Risk_Label)) +
+  geom_bar(position = "fill") +
+  xlab("English Proficiency" ) +
+  ylab("Perceived Risk") +
+  ggtitle("Stacked Bar Chart of Perceived Risk by English Proficiency")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Looking at English Proficiency and perceived benefits we can see that those participants that do not speak English at all have the highest perception of clinical trials providing no benefits. Interestingly, many people in the same English proficiency group also said they perceive no risks.
+
+```{r}
+benefits_lit = table(dat$Benefit_Label, dat$HelpMedLit_Label)
+superheat(benefits_lit, scale=TRUE, heat.col.scheme = "viridis",title = "Perceived Benefits of Trials by Medical Literacy", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+risk_lit = table(dat$Risk_Label, dat$HelpMedLit_Label)
+superheat(risk_lit, scale=TRUE,heat.col.scheme = "red",title = "Perceived Risks of Trials by Medical Literacy", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+ggplot(data = dat, aes(x = HelpMedLit_Label, fill = Benefit_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Help with Medical Literature" ) +
+  ylab("Perceived Benefit") +
+  ggtitle("Stacked Bar Chart of Perceived Benefit by Help with Medical Literature")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+ggplot(data = dat, aes(x = HelpMedLit_Label, fill = Risk_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Help with Medical Literature" ) +
+  ylab("Perceived Risk") +
+  ggtitle("Stacked Bar Chart of Perceived Risk by Help with Medical Literature")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Interestingly in this map, there is more of a spread of perceived benefits across ability to read medical literature, with equal spread in each group. Those who often or always need help with medical literature had a larger range of risks other than just side effects.
+
+```{r}
+benefits_loc = table(dat$Benefit_Label, dat$Location_Label)
+superheat(benefits_loc, scale=TRUE, heat.col.scheme = "viridis",title = "Perceived Benefits of Trials by Location", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+risk_loc = table(dat$Risk_Label, dat$Location_Label)
+superheat(risk_loc, scale=TRUE,heat.col.scheme = "red",title = "Perceived Risks of Trials by Location", title.size = 3, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+ggplot(data = dat, aes(x = Location_Label, fill = Benefit_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Location" ) +
+  ylab("Perceived Benefit") +
+  ggtitle("Stacked Bar Chart of Perceived Benefit by Location")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+ggplot(data = dat, aes(x = Location_Label, fill = Risk_Label)) +
+  geom_bar(position = "fill") +
+  xlab("Location" ) +
+  ylab("Perceived Risk") +
+  ggtitle("Stacked Bar Chart of Perceived Risk by Location")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Perceived risks and benefits were consistent across location.
+
+### Maps
+
+```{r}
+all_states <- map_data("state")
+
+stateData <- left_join(all_states,dat,by="region")
+
+# weighted average interest level
+state_avg_interest <- stateData %>%
+  group_by(State) %>%
+  summarize(
+    total_people = n(),          
+    weighted_avg_interest = sum(interest) / total_people  
+  )
+final_data <- left_join(stateData, state_avg_interest, by = "State")
+```
+
+```{r}
+ggplot() +
+  geom_polygon(data=final_data, mapping=aes(x=long, y=lat, group = group, fill=weighted_avg_interest) , color="grey50")+
+  scale_fill_gradientn(name = "Interest Level", colors = terrain.colors(100)) + 
+  coord_map() +
+ theme_classic() + theme(axis.ticks.y = element_blank(),axis.text.y = element_blank(), axis.ticks.x = element_blank(),axis.text.x = element_blank(),  
+        legend.title = element_text(size = 10))+
+  ggtitle("Average Interest in Clinical Trial Level (0=Not all Interested, 5=Very Interested) by State") +
+  theme(plot.title = element_text(size = 12))
+
+
+```
+
+From this map we can see that the states with the highest average interest levels are: Montana, Wyoming, Washington. The states with the lowest average interest levels are: Vermont, South Dakota, Rhode Island, North Carolina, and Colorado.
+
+South Dakota and Vermont have the lowest average interest levels while Washington, Montana and Wyoming have the highest.
+
+```{r}
+# weighted average income level
+state_avg_income <- stateData %>%
+  group_by(State) %>%
+  summarize(
+    total_people = n(),          
+    weighted_avg_income = sum(AnnualIncome) / total_people  
+  )
+final_data <- left_join(stateData, state_avg_income, by = "State")
+```
+
+```{r}
+library(ggplot2)
+
+ggplot() +
+  geom_polygon(data = final_data, mapping = aes(x = long, y = lat, group = group, fill = weighted_avg_income), color = "grey50") +
+  scale_fill_gradientn(name = "Income", colors = viridisLite::plasma(100)) + 
+  coord_map() +
+  theme_minimal() +
+  theme(axis.ticks = element_blank(), axis.text = element_blank()) +
+  ggtitle("Average Income Group (0: No Income, 5: >$120,000) Level by State")
+
+```
+
+Looking at participant's average income by State, the states with the highest average income are: North Dakota, Colorado, New York, New Jersey. The states with the lowest are: Vermont, South Dakota, Mississippi, Oklahoma, Tennessee.
+
+Vermont and South Dakota also had the lowest average interest in participating in clinical trials, supporting the theory that income is a factor in clinical trial participation.
+
+However, Colorado was one of the lower interest States but higher income. None of the states with the highest interest had the highest average income. Suggesting that lower income is more strongly correlated with clinical trial interest rather than higher income.
+
+This is not what we expected, as we saw that overall higher income levels resulted in higher interest levels. It seems that this phenomena varies by state.
+
+```{r}
+selected_states <- c("Washington","Wyoming","Montana","Vermont","South Dakota", "Colorado", "North Dakota", "Arizona",  "California", "North Carolina", "Kansas", "Rhode Island", "New York", "Mississippi")
+dat_subset <- dat[dat$State %in% selected_states, ]
+
+dat_subset$State <- factor(dat_subset$State, levels = selected_states)
+
+
+benefits_state <- table(dat_subset$Benefit_Label, dat_subset$State)
+superheat(benefits_state, scale = TRUE, heat.col.scheme = "viridis", 
+          title = "Perceived Benefits of Trials by State",
+          title.size = 4, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+risk_state <- table(dat_subset$Risk_Label, dat_subset$State)
+superheat(risk_state, scale = TRUE, heat.col.scheme = "red", 
+          title = "Perceived Risk of Trials by State",
+          title.size = 4, bottom.label.text.size = 2, bottom.label.text.angle = 90, left.label.text.size = 3)
+
+ed_state <- table(dat_subset$Ed_Label, dat_subset$State)
+superheat(ed_state,  scale=TRUE, heat.col.scheme = "viridis", 
+          title = "Education Level by State",
+          title.size = 4, bottom.label.text.size = 2, bottom.label.text.angle = 90)
+
+
+
+```
+
+From this map we can see that the states with the highest average interest levels are: Montana, Wyoming, Washington. The states with the lowest average interest levels are: Vermont, South Dakota, Rhode Island, North Carolina, and Colorado.
+
+Looking at participant's average income by State, the states with the highest average income are: North Dakota, Colorado, New York, New Jersey. The states with the lowest are: Vermont, South Dakota, Mississippi, Oklahoma, Tennessee.
+
+Perceived risk seems consistent across states, specifically looking at the states at the extremes of income and interest. with side effect/risk to overall health being the primary risk concern. There is no clear trend that state influences clinical trial interest as they vary by income, education level, and other variables.
+
+## Conclusion
+
+Based on the data we can see that there is evidence that those who are socioeconomically disadvantaged are less inclined to participate in clinical trials. People with lower education levels were less likely to see any medical or social benefits from participating in research studies, citing either no benefit or monetary benefits. Those participants in the highest income groups and higher education levels were more likely to see social/medical benefits for participating in clinical studies. Regardless of socioeconomic status, the biggest concern was side effects or risk to overall health. This was true across income levels, education levels, State, Medical Literacy. There were some contradictions within the groups of people who do not speak English well, perceiving no benefits but also no risk but consistent interest level compared to those who speak English well, suggesting some confusion. There doesn't seem to be a large difference in interest by location (rural, city, suburbs). However there is does seem to be a difference by State.
+
+Overall, the data suggests that socioeconomically disadvantaged individuals, particularly those with lower education levels and income, are less inclined to participate in clinical trials. This is reflected in their perception of fewer benefits and higher perceived risks. However, it is important to acknowledge the significance of side effects and health risks as primary concerns, consistent across various socioeconomic groups. While location (rural, city, suburbs) does not appear to significantly influence interest in clinical trials, the state of residence does.
+
+Sources:
+
+```         
+@data{DVN/FOP4IN_2023,
+author = {Kim, Jennifer},
+publisher = {Harvard Dataverse},
+title = {{The impact of socioeconomic status on individual attitudes and experience with clinical trials: How socioeconomically disadvantaged individuals are being left behind}},
+UNF = {UNF:6:vkI4HHkz+fXdtgLABuLzCQ==},
+year = {2023},
+version = {V1},
+doi = {10.7910/DVN/FOP4IN},
+url = {https://doi.org/10.7910/DVN/FOP4IN}
+}
+
+https://rpubs.com/knm6/mapsI
+https://r-charts.com/part-whole/stacked-bar-chart-ggplot2/
+https://rlbarter.github.io/superheat/labels.html
+
+https://www.statsamerica.org/sip/rank_list.aspx?rank_label=pop1
+
+https://www.census.gov/data/tables/time-series/demo/income-poverty/historical-poverty-thresholds.html
+
+https://nexus.od.nih.gov/all/2019/11/26/expanding-nihs-definition-of-socio-economic-disadvantaged-to-be-more-inclusive-and-diversify-the-workforce/
+```
