@@ -386,31 +386,109 @@ The main variable of interest, participant interest in clinical trials, showed t
 # quantile(dat$WorkExp)
 
 
-hist(dat$Age, main = "Histogram of Age", xlab = "Age", ylab = "Counts", col="lightblue")
+hist(dat$Age, main = "Histogram of Age", xlab = "Age in Years", ylab = "Counts", col="lightblue")
 hist(dat$WorkExp, main = "Histogram of Work Experience", xlab = "Years of Work Experience", ylab = "Counts", col="lightyellow")
 
 ```
 
 ```{r}
 
-custom_titles <- c("Distribution of Gender", "Distribution of States", "Distribution of Interest Level", "Distribution of Employment Status", "Distribution of Race", "Distribution of English Procifiency", "Distribution of Help with Medical Literature", "Distribution of Location", "Distribution of Insurance", "Distribution of Ability to Afford Medical Care", "Distribution of Perceived Benefits", " Distribution of Perceived Risks")
 
-plot_colors <- rainbow(length(names(sub_dat)))
+ggplot(data = dat, aes(x = Gender_Label)) +
+  geom_bar(fill="purple")+
+  theme_minimal()+
+  xlab("Gender")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Participant Counts by Gender") 
 
-for (i in 1:length(names(sub_dat))) {
-  col <- names(sub_dat)[i]
-  if (!is.numeric(sub_dat[[col]])) {
-    counts <- table(sub_dat[[col]])
-    title <- custom_titles[which(names(sub_dat) == col)]
-    barplot(counts, main = title, beside = TRUE, las = 2, cex.names = 0.7, ylab = "Counts", col = plot_colors[i])
-  }
-}
+ggplot(data = dat, aes(x = State)) +
+  geom_bar(fill="green")+
+  theme_minimal()+
+  xlab("State")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Participant Counts by State") 
+
+ggplot(data = dat, aes(x = interest_Label)) +
+  geom_bar(fill="pink")+
+  theme_minimal()+
+  xlab("Interest Level")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Participant Counts by Interest Level") 
+
+ggplot(data = dat, aes(x = EmpStat_Label)) +
+  geom_bar(fill="limegreen")+
+  theme_minimal()+
+  xlab("Employment Status")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Distribution of Employment Status") 
+
+ggplot(data = dat, aes(x = total_race_Label)) +
+  geom_bar(fill="orange")+
+  theme_minimal()+
+  xlab("Race")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Distribution of Race") 
+
+ggplot(data = dat, aes(x = EnglishProf_Label)) +
+  geom_bar(fill="darkseagreen")+
+  theme_minimal()+
+  xlab("English Proficiency")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Participant Counts by English Proficiency") 
+
+ggplot(data = dat, aes(x = HelpMedLit_Label)) +
+  geom_bar(fill="blue")+
+  theme_minimal()+
+  xlab("Help with Medical Literature")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Participant Counts by Medical Literacy") 
+
+ggplot(data = dat, aes(x = Location_Label)) +
+  geom_bar(fill="darkred")+
+  theme_minimal()+
+  xlab("Location")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Participant Counts by Location") 
+
+ggplot(data = dat, aes(x = Insurance_Label)) +
+  geom_bar(fill="slateblue1")+
+  theme_minimal()+
+  xlab("Insurance")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Participant Counts by Insurance") 
+
+ggplot(data = dat, aes(x = AffordMed_Label)) +
+  geom_bar(fill="purple")+
+  theme_minimal()+
+  xlab("Ability to Afford Medical Care")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Participant Counts by Ability to Afford Medical Care") 
+
+ggplot(data = dat, aes(x = Benefit_Label)) +
+  geom_bar(fill="turquoise")+
+  theme_minimal()+
+  xlab("Benefit")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Participant Counts by Perceived Benefit") 
+
+ggplot(data = dat, aes(x = Risk_Label)) +
+  geom_bar(fill="lavender")+
+  theme_minimal()+
+  xlab("Risk")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+   labs(title = "Participant Counts by Perceived Risk") 
 
 ggplot(data = dat, aes(x = Household)) +
-  geom_bar(fill="purple")
+  geom_bar(fill="khaki3")+
+  theme_minimal()+
+  xlab("# of People in Household")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ggplot(data = dat, aes(x = Dependents)) +
-  geom_bar(fill="green")
+  geom_bar(fill="green")+
+  theme_minimal()+
+  xlab("# of Dependents")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 ```
@@ -596,7 +674,7 @@ ggplot(data = dat, aes(x = Ed_Label, fill = interest_Label)) +
   geom_bar(position = "fill") +
   xlab("Education Level" ) +
   ylab("Proportion") +
-  ggtitle("Proportional Interest in Clinical Trials by Clinical Trial Interest Level")+
+  ggtitle("Proportional Interest in Clinical Trials by Education Level")+
    labs(fill = "Clinical Trial Interest Level") +
   theme_minimal() +
    theme(axis.text.x = element_text(angle = 45, hjust = 1))+
@@ -674,19 +752,15 @@ ggplot(data = dat, aes(x = AffordMed_Label, fill = interest_Label)) +
 
 ```
 
-Interest levels are consistent compared to males and females. However those participants that identified as Transgender Male/Female or Gender fluid were proportionally much more interested in participating in research. Interest levels are relatively consistent across employment status, with slightly more full-time employed people being somewhat to very interested in participating in a clinical trial. Interest levels are proportionally consistent across the different races and those who selected other. There is a slightly increase in participants interest levels as income increases, but this is very slight. However, those that reported no income had a proportionally significantly less interest in participating in clinical research. There is a steady increase in interest levels with increase in education levels with those participants with a doctorate having the highest levels of somewhat to very interested. Conversely, those who need additional help reading medical literature are more interested in participating in trials.
+Interest levels are consistent compared to males and females. However those participants that identified as Transgender Male/Female or Gender fluid were proportionally much more interested in participating in research. Interest levels are relatively consistent across employment status, with slightly more full-time employed people being somewhat to very interested in participating in a clinical trial. Interest levels are proportionally consistent across the different races and those who selected other.\*The study population is largely White.
 
-English proficiency is a large factor in interest levels, proportionally those who have better English proficiency are more interested in research.
+There is a steady increase in participants interest levels as income increases. Those that reported no income had a proportionally significantly less interest in participating in clinical research. There is a steady increase in interest levels with increase in education levels with those participants with a doctorate having the highest levels of somewhat to very interested.
 
-Interestingly interest in clinical trials is consistent across living situations. Also consistent across location of living.
+English proficiency is an influential factor in interest levels, proportionally those who have better English proficiency are more interested in research.
 
-The proportion of those interested in clinical trials is similar whether or not they have health insurance. Interest is also similar among people's ability to afford their medical care.
+Conversely, those who need additional help reading medical literature are more interested in participating in trials.
 
-Look at benefits and risks of No income people
-
-look at benefits risk for transgender and gender fluid
-
-Education
+Interestingly interest in clinical trials is consistent across living situations, location of living, and whether or not they have health insurance. Interest is also similar among people's ability to afford their medical care.
 
 ### Heatmaps
 
@@ -820,7 +894,7 @@ ggplot(data = dat, aes(x = HelpMedLit_Label, fill = Risk_Label)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-Interestingly in this map, there is more of a spread of perceived benefits across ability to read medical literature, with equal spread in each group. Those who often or always need help with medical literature had a larger range of risks other than just side effects.
+In this map, there is more of a spread of perceived benefits across ability to read medical literature, with equal spread in each group. Those who often or always need help with medical literature had a larger range of risks other than just side effects.
 
 ```{r}
 benefits_loc = table(dat$Benefit_Label, dat$Location_Label)
@@ -911,7 +985,7 @@ Vermont and South Dakota also had the lowest average interest in participating i
 
 However, Colorado was one of the lower interest States but higher income. None of the states with the highest interest had the highest average income. Suggesting that lower income is more strongly correlated with clinical trial interest rather than higher income.
 
-This is not what we expected, as we saw that overall higher income levels resulted in higher interest levels. It seems that this phenomena varies by state.
+This is not what we expected, as we saw in the previous analysis that overall higher income levels resulted in higher interest levels. It seems that this phenomena varies by state.
 
 ```{r}
 selected_states <- c("Washington","Wyoming","Montana","Vermont","South Dakota", "Colorado", "North Dakota", "Arizona",  "California", "North Carolina", "Kansas", "Rhode Island", "New York", "Mississippi")
@@ -939,17 +1013,13 @@ superheat(ed_state,  scale=TRUE, heat.col.scheme = "viridis",
 
 ```
 
-From this map we can see that the states with the highest average interest levels are: Montana, Wyoming, Washington. The states with the lowest average interest levels are: Vermont, South Dakota, Rhode Island, North Carolina, and Colorado.
-
-Looking at participant's average income by State, the states with the highest average income are: North Dakota, Colorado, New York, New Jersey. The states with the lowest are: Vermont, South Dakota, Mississippi, Oklahoma, Tennessee.
-
 Perceived risk seems consistent across states, specifically looking at the states at the extremes of income and interest. with side effect/risk to overall health being the primary risk concern. There is no clear trend that state influences clinical trial interest as they vary by income, education level, and other variables.
 
 ## Conclusion
 
-Based on the data we can see that there is evidence that those who are socioeconomically disadvantaged are less inclined to participate in clinical trials. People with lower education levels were less likely to see any medical or social benefits from participating in research studies, citing either no benefit or monetary benefits. Those participants in the highest income groups and higher education levels were more likely to see social/medical benefits for participating in clinical studies. Regardless of socioeconomic status, the biggest concern was side effects or risk to overall health. This was true across income levels, education levels, State, Medical Literacy. There were some contradictions within the groups of people who do not speak English well, perceiving no benefits but also no risk but consistent interest level compared to those who speak English well, suggesting some confusion. There doesn't seem to be a large difference in interest by location (rural, city, suburbs). However there is does seem to be a difference by State.
+Based on the data we can see that there is evidence that those who are socioeconomically disadvantaged are less inclined to participate in clinical trials. People with lower education levels were less likely to see any medical or social benefits from participating in research studies, citing either no benefit or monetary benefits. Those participants in the highest income groups and higher education levels were more likely to see social/medical benefits for participating in clinical studies. Regardless of socioeconomic status, the biggest concern was side effects or risk to overall health. This was true across income levels, education levels, State, Medical Literacy. There were some contradictions within the groups of people who do not speak English well, perceiving no benefits but also no risk but consistent interest level compared to those who speak English well, suggesting some confusion. There doesn't seem to be a large difference in interest by location (rural, city, suburbs). However there is does seem to be a difference by State but with no clear trend. The lowest income states did have the lowest interest levels. However the highest income states did not have the highest interest levels. More data on exact income, with data on a more diverse population (race, state, location) would provide more insight.
 
-Overall, the data suggests that socioeconomically disadvantaged individuals, particularly those with lower education levels and income, are less inclined to participate in clinical trials. This is reflected in their perception of fewer benefits and higher perceived risks. However, it is important to acknowledge the significance of side effects and health risks as primary concerns, consistent across various socioeconomic groups. While location (rural, city, suburbs) does not appear to significantly influence interest in clinical trials, the state of residence does.
+Overall, the data suggests that socioeconomically disadvantaged individuals, particularly those with lower education levels and income, are less inclined to participate in clinical trials. This is reflected in their perception of fewer benefits and higher perceived risks. However, it is important to acknowledge the significance of side effects and health risks as primary concerns, consistent across various socioeconomic groups.
 
 Sources:
 
